@@ -1,0 +1,8 @@
+flask
+flask-cors
+torch
+numpy
+opencv-python-headless
+Pillow
+gdown
+segment-anything
