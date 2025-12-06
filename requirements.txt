@@ -7,3 +7,5 @@ opencv-python-headless
 Pillow
 gdown
 segment-anything
+gradio
+
