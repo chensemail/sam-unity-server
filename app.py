@@ -11,7 +11,8 @@ import gradio as gr
 
 # ---------- Download checkpoint if missing ----------
 CHECKPOINT_PATH = "sam_vit_b_01ec64.pth"  # change to your checkpoint file
-CHECKPOINT_URL = "https://drive.google.com/file/d/1NnjLIf-kbcYLZz8-_MKnAshnguZAZH-S/view?usp=sharing"
+# Use the "uc?id=" format for gdown to download correctly
+CHECKPOINT_URL = "https://drive.google.com/uc?id=1NnjLIf-kbcYLZz8-_MKnAshnguZAZH-S"
 
 if not os.path.exists(CHECKPOINT_PATH):
     print("Downloading SAM checkpoint...")
