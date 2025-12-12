@@ -1,9 +1,9 @@
 flask
 flask-cors
 
-# CPU-only PyTorch (MUCH smaller than GPU version)
-torch==2.2.0+cpu
-torchvision==0.17.0+cpu
+# CPU-only PyTorch for Python 3.12
+torch==2.5.1+cpu
+torchvision==0.20.1+cpu
 --extra-index-url https://download.pytorch.org/whl/cpu
 
 numpy
@@ -11,6 +11,5 @@ opencv-python-headless
 Pillow
 gdown
 
-# Segment Anything + Gradio
 segment-anything
 gradio
