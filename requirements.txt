@@ -1,9 +1,9 @@
 flask
 flask-cors
 
-# CPU-only PyTorch for Python 3.12
+# CPU PyTorch for Python 3.13
 torch==2.5.1+cpu
-torchvision==0.20.1+cpu
+torchvision==0.22.1+cpu
 --extra-index-url https://download.pytorch.org/whl/cpu
 
 numpy
@@ -11,5 +11,7 @@ opencv-python-headless
 Pillow
 gdown
 
-segment-anything
+# If segment-anything fails, install from GitHub
+git+https://github.com/facebookresearch/segment-anything.git
+
 gradio
