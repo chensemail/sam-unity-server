@@ -21,7 +21,7 @@ if not os.path.exists(CHECKPOINT_PATH):
 # ---------- Initialize SAM ----------
 model_type = "vit_b"  # or "vit_h" if you want
 sam = sam_model_registry[model_type](checkpoint=CHECKPOINT_PATH)
-sam.to("cuda" if torch.cuda.is_available() else "cpu")
+sam.to("cpu")
 mask_generator = SamAutomaticMaskGenerator(sam)
 
 # ---------- Helper functions ----------
