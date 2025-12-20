@@ -11,20 +11,14 @@ import gradio as gr
 # MobileSAM imports
 from mobile_sam import sam_model_registry, SamAutomaticMaskGenerator
 
-# ---------- Download MobileSAM checkpoint ----------
+# ---------- Download MobileSAM checkpoint from Google Drive ----------
 CHECKPOINT_PATH = "mobile_sam_weights_only.pt"
-CHECKPOINT_URL = "https://github.com/ChaoningZhang/MobileSAM/releases/download/v1.0/mobile_sam.pt"
+GDRIVE_FILE_ID = "1SzJMrgsHU_wQfjqE3iA_ikdVS4Fkg6V1"
+GDRIVE_URL = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}"
 
 if not os.path.exists(CHECKPOINT_PATH):
-    print("Downloading MobileSAM checkpoint...")
-    tmp_path = "mobile_sam.pt"
-    gdown.download(CHECKPOINT_URL, tmp_path, quiet=False)
-
-    # Convert checkpoint to weights-only for PyTorch 2.6+
-    checkpoint = torch.load(tmp_path, weights_only=False)
-    torch.save(checkpoint, CHECKPOINT_PATH, _use_new_zipfile_serialization=True)
-    os.remove(tmp_path)
-    print("Converted checkpoint saved as weights-only.")
+    print("Downloading MobileSAM checkpoint from Google Drive...")
+    gdown.download(GDRIVE_URL, CHECKPOINT_PATH, quiet=False)
 
 # ---------- Initialize MobileSAM ----------
 model_type = "vit_t"  # tiny transformer
