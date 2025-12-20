@@ -61,7 +61,6 @@ def apply_erosion_and_contours(img):
 # ---------- Gradio function ----------
 def segment_image_base64(img_b64: str):
     img = decode_base64_image(img_b64)
-
     masks = mask_generator.generate(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
 
     bw_mask = np.zeros(img.shape[:2], dtype=np.uint8)
@@ -86,5 +85,5 @@ if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",
         server_port=port,
-        api_mode=True
+        enable_queue=True  # optional, helps with multiple requests
     )
