@@ -1,17 +1,16 @@
 flask
 flask-cors
 
-# Correct versions for Python 3.13
-torch==2.7.1+cpu
-torchvision==0.22.1+cpu
+# PyTorch CPU (let pip resolve compatible versions)
 --extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
 
 numpy
 opencv-python-headless
 Pillow
 gdown
-
-# Install segment-anything from GitHub (PyPI version broken)
-git+https://github.com/facebookresearch/segment-anything.git
-
 gradio
+
+# MobileSAM (replaces segment-anything)
+git+https://github.com/ChaoningZhang/MobileSAM.git
