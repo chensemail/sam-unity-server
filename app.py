@@ -12,22 +12,29 @@ import gradio as gr
 from mobile_sam import sam_model_registry, SamAutomaticMaskGenerator
 
 # ---------- Download MobileSAM checkpoint ----------
-CHECKPOINT_PATH = "mobile_sam.pt"
+CHECKPOINT_PATH = "mobile_sam_weights_only.pt"
 CHECKPOINT_URL = "https://github.com/ChaoningZhang/MobileSAM/releases/download/v1.0/mobile_sam.pt"
 
 if not os.path.exists(CHECKPOINT_PATH):
     print("Downloading MobileSAM checkpoint...")
-    gdown.download(CHECKPOINT_URL, CHECKPOINT_PATH, quiet=False)
+    tmp_path = "mobile_sam.pt"
+    gdown.download(CHECKPOINT_URL, tmp_path, quiet=False)
+
+    # Convert checkpoint to weights-only for PyTorch 2.6+
+    checkpoint = torch.load(tmp_path, weights_only=False)
+    torch.save(checkpoint, CHECKPOINT_PATH, _use_new_zipfile_serialization=True)
+    os.remove(tmp_path)
+    print("Converted checkpoint saved as weights-only.")
 
 # ---------- Initialize MobileSAM ----------
 model_type = "vit_t"  # tiny transformer
 sam = sam_model_registry[model_type](checkpoint=CHECKPOINT_PATH)
-sam.to("cpu")  # CPU ONLY (important for free servers)
+sam.to("cpu")  # CPU ONLY
 sam.eval()
 
 mask_generator = SamAutomaticMaskGenerator(
     sam,
-    points_per_side=16,   # ↓ reduces memory further
+    points_per_side=16,  # ↓ reduces memory further
     pred_iou_thresh=0.88,
     stability_score_thresh=0.95,
 )
