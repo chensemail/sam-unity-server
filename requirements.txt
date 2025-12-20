@@ -10,7 +10,7 @@ numpy
 opencv-python-headless
 Pillow
 gdown
-gradio>=3.41
+gradio==3.53.2
 timm
 
 # MobileSAM
