@@ -1,7 +1,7 @@
 flask
 flask-cors
 
-# PyTorch CPU (let pip resolve compatible versions)
+# PyTorch CPU
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch
 torchvision
@@ -11,6 +11,7 @@ opencv-python-headless
 Pillow
 gdown
 gradio
+timm
 
-# MobileSAM (replaces segment-anything)
+# MobileSAM
 git+https://github.com/ChaoningZhang/MobileSAM.git
