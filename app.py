@@ -21,19 +21,9 @@ if not os.path.exists(CHECKPOINT_PATH):
 
 # ---------- Initialize MobileSAM ----------
 model_type = "vit_t"  # tiny transformer
-
-# Step 1: load checkpoint explicitly with weights_only=False
-state_dict = torch.load(CHECKPOINT_PATH, weights_only=False)
-
-# Step 2: initialize model without checkpoint
-sam = sam_model_registry[model_type](checkpoint=None)
-
-# Step 3: manually load the weights
-sam.load_state_dict(state_dict)
-
+sam = sam_model_registry[model_type](checkpoint=CHECKPOINT_PATH)
 sam.to("cpu")  # CPU ONLY (important for free servers)
 sam.eval()
-
 
 mask_generator = SamAutomaticMaskGenerator(
     sam,
