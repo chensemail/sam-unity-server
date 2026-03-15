@@ -1,89 +1,73 @@
-import os
 import base64
 import io
-import torch
-import gdown
-import numpy as np
+import requests
 import cv2
+import numpy as np
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 from PIL import Image
-import gradio as gr
 
-# MobileSAM imports
-from mobile_sam import sam_model_registry, SamAutomaticMaskGenerator
+app = Flask(__name__)
+CORS(app)
 
-# ---------- Download MobileSAM checkpoint from Google Drive ----------
-CHECKPOINT_PATH = "mobile_sam_weights_only.pt"
-GDRIVE_FILE_ID = "1SzJMrgsHU_wQfjqE3iA_ikdVS4Fkg6V1"
-GDRIVE_URL = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}"
+# HuggingFace Space API
+HF_SPACE_URL = "https://skalskip-segment-anything-model-2.hf.space/run/predict"
 
-if not os.path.exists(CHECKPOINT_PATH):
-    print("Downloading MobileSAM checkpoint from Google Drive...")
-    gdown.download(GDRIVE_URL, CHECKPOINT_PATH, quiet=False)
-
-# ---------- Initialize MobileSAM ----------
-model_type = "vit_t"  # tiny transformer
-sam = sam_model_registry[model_type](checkpoint=CHECKPOINT_PATH)
-sam.to("cpu")  # CPU ONLY
-sam.eval()
-
-mask_generator = SamAutomaticMaskGenerator(
-    sam,
-    points_per_side=16,  # ↓ reduces memory further
-    pred_iou_thresh=0.88,
-    stability_score_thresh=0.95,
-)
-
-# ---------- Helper functions ----------
-def decode_base64_image(img_b64: str):
-    img_bytes = base64.b64decode(img_b64)
+# -------- Decode base64 image ----------
+def decode_image(img_base64):
+    img_bytes = base64.b64decode(img_base64)
     img_pil = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-    return np.array(img_pil)[:, :, ::-1]  # RGB → BGR
+    return np.array(img_pil)
 
-def encode_image_to_base64(img_cv):
+# -------- Encode image ----------
+def encode_image(img_cv):
     _, buffer = cv2.imencode(".png", img_cv)
     return base64.b64encode(buffer).decode("utf-8")
 
-def apply_erosion_and_contours(img):
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (21, 21))
-    eroded = cv2.morphologyEx(img, cv2.MORPH_ERODE, kernel)
-    contours, _ = cv2.findContours(eroded, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+# -------- OpenCV contour processing ----------
+def apply_contours(mask):
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (21,21))
+    eroded = cv2.morphologyEx(mask, cv2.MORPH_ERODE, kernel)
 
-    x, y = img.shape
-    blackImg = np.zeros((x, y), dtype=np.uint8)
+    contours,_ = cv2.findContours(eroded, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    x,y = mask.shape
+    result = np.zeros((x,y),dtype=np.uint8)
 
     for cntr in contours:
-        if cv2.contourArea(cntr) > 300:
+        area = cv2.contourArea(cntr)
+        if area > 300:
             hull = cv2.convexHull(cntr)
-            cv2.drawContours(blackImg, [hull], -1, 255, 1)
+            cv2.drawContours(result,[hull],-1,255,1)
 
-    return blackImg
+    return result
 
-# ---------- Gradio function ----------
-def segment_image_base64(img_b64: str):
-    img = decode_base64_image(img_b64)
-    masks = mask_generator.generate(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+# -------- API endpoint ----------
+@app.route("/segment", methods=["POST"])
+def segment():
 
-    bw_mask = np.zeros(img.shape[:2], dtype=np.uint8)
-    for m in masks:
-        bw_mask[m["segmentation"]] = 255
+    data = request.json
+    img_b64 = data["image"]
 
-    processed_mask = apply_erosion_and_contours(bw_mask)
-    mask_color = cv2.cvtColor(processed_mask, cv2.COLOR_GRAY2BGR)
+    img = decode_image(img_b64)
 
-    return encode_image_to_base64(mask_color)
-
-# ---------- Gradio Interface ----------
-demo = gr.Interface(
-    fn=segment_image_base64,
-    inputs=gr.Textbox(label="Base64 Image"),
-    outputs=gr.Textbox(label="Mask Base64"),
-)
-
-# ---------- Launch ----------
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 7860))
-    demo.launch(
-        server_name="0.0.0.0",
-        server_port=port,
-        enable_queue=True  # optional, helps with multiple requests
+    # Send image to SAM2 HuggingFace space
+    response = requests.post(
+        HF_SPACE_URL,
+        json={
+            "data":[img.tolist()]
+        }
     )
+
+    sam_mask = np.array(response.json()["data"][0])
+
+    processed = apply_contours(sam_mask)
+
+    mask_color = cv2.cvtColor(processed, cv2.COLOR_GRAY2BGR)
+
+    return jsonify({
+        "mask": encode_image(mask_color)
+    })
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)

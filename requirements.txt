@@ -1,19 +1,6 @@
 flask
 flask-cors
-
-# PyTorch (CPU, Python 3.12 compatible)
-torch==2.7.1
-torchvision==0.22.1
-
-numpy
 opencv-python-headless
-Pillow
-gdown
-
-# Gradio — MUST be <= 6.2.0
-gradio==6.2.0
-
-timm
-
-# MobileSAM
-git+https://github.com/ChaoningZhang/MobileSAM.git
+numpy
+pillow
+requests
