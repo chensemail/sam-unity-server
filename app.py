@@ -6,6 +6,7 @@ import numpy as np
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from PIL import Image
+import traceback
 
 app = Flask(__name__)
 CORS(app)
@@ -57,49 +58,61 @@ def apply_contours(mask):
 # -------- API endpoint ----------
 @app.route("/segment", methods=["POST"])
 def segment():
-
     print("===== New request received =====")
+    try:
+        data = request.json
+        if not data or "image" not in data:
+            return jsonify({"error": "No image data provided"}), 400
 
-    data = request.json
+        img_b64 = data["image"]
+        
+        # 1. Gradio/HF usually needs the Data URI prefix
+        if not img_b64.startswith("data:image"):
+            img_b64 = f"data:image/png;base64,{img_b64}"
 
-    if "image" not in data:
-        print("ERROR: No image in request")
-        return jsonify({"error":"no image"}),400
+        print("Sending request to HuggingFace...")
+        response = requests.post(
+            HF_SPACE_URL,
+            json={"data": [img_b64]},
+            timeout=60 # SAM2 can be slow, don't let it timeout
+        )
 
-    img_b64 = data["image"]
+        # Check if the HF Space is actually awake
+        if response.status_code != 200:
+            print(f"HF Error: {response.status_code} - {response.text}")
+            return jsonify({"error": "HuggingFace Space error", "details": response.text}), 500
 
-    img = decode_image(img_b64)
+        result = response.json()
 
-    print("Sending image to HuggingFace SAM2...")
+        # 2. Check if the response has the data we expect
+        if "data" not in result or not result["data"]:
+            print(f"Unexpected HF Response Format: {result}")
+            return jsonify({"error": "HF returned no data"}), 500
 
-    response = requests.post(
-        HF_SPACE_URL,
-        json={"data":[img_b64]}
-    )
+        mask_data = result["data"][0]
 
-    print("HuggingFace response status:", response.status_code)
+        # 3. If HF returns a Data URI, strip the header before decoding
+        if isinstance(mask_data, str) and "," in mask_data:
+            mask_data = mask_data.split(",")[1]
 
-    result = response.json()
+        mask_bytes = base64.b64decode(mask_data)
+        mask = cv2.imdecode(np.frombuffer(mask_bytes, np.uint8), cv2.IMREAD_GRAYSCALE)
 
-    print("HuggingFace response received")
+        if mask is None:
+            print("Failed to decode mask image")
+            return jsonify({"error": "Invalid mask format from HF"}), 500
 
-    mask_b64 = result["data"][0]
-    print("Decoding mask...")
+        processed = apply_contours(mask)
+        mask_color = cv2.cvtColor(processed, cv2.COLOR_GRAY2BGR)
 
-    mask_bytes = base64.b64decode(mask_b64)
-    mask = cv2.imdecode(np.frombuffer(mask_bytes,np.uint8),cv2.IMREAD_GRAYSCALE)
+        print("Success! Sending mask back to Unity.")
+        return jsonify({"mask": encode_image(mask_color)})
 
-    print("Mask shape:", mask.shape)
-
-    processed = apply_contours(mask)
-
-    mask_color = cv2.cvtColor(processed, cv2.COLOR_GRAY2BGR)
-
-    print("Returning mask to Unity")
-
-    return jsonify({
-        "mask": encode_image(mask_color)
-    })
+    except Exception as e:
+        # This will print the EXACT line number and error in Render logs
+        print("CRITICAL SERVER ERROR:")
+        traceback.print_exc() 
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/")
