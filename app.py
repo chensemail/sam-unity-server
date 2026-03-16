@@ -74,9 +74,7 @@ def segment():
 
     response = requests.post(
         HF_SPACE_URL,
-        json={
-            "data":[{"image_base64": img_b64}]
-        }
+        json={"data":[img_b64]}
     )
 
     print("HuggingFace response status:", response.status_code)
@@ -85,8 +83,7 @@ def segment():
 
     print("HuggingFace response received")
 
-    mask_b64 = result["data"][0]["mask_base64"]
-
+    mask_b64 = result["data"][0]
     print("Decoding mask...")
 
     mask_bytes = base64.b64decode(mask_b64)
